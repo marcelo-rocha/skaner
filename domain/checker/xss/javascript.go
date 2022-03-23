@@ -31,7 +31,7 @@ _scannerLoop:
 				fnPos := input.Offset()
 				if tt, _ := lexer.Next(); tt == js.OpenParenToken {
 					if err := scanArguments(lexer); err != nil {
-						return result, NewParsingError("lexer error", lexer.Err())
+						return result, err
 					}
 					line, _, _ := parse.Position(bytes.NewReader(src), fnPos)
 					result = append(result, line)
@@ -44,6 +44,7 @@ _scannerLoop:
 
 func scanArguments(lexer *js.Lexer) error {
 	parenthesesCount := 1
+_scannerLoop:
 	for {
 		tt, _ := lexer.Next()
 		switch tt {
@@ -51,13 +52,13 @@ func scanArguments(lexer *js.Lexer) error {
 			if lexer.Err() != io.EOF {
 				return NewParsingError("lexer error", lexer.Err())
 			}
-			break
+			return ErrUnexpectedSourceEnd
 		case js.OpenParenToken:
 			parenthesesCount++
 		case js.CloseParenToken:
 			parenthesesCount--
 			if parenthesesCount == 0 {
-				break
+				break _scannerLoop
 			}
 		}
 	}

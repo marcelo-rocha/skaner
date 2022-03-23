@@ -39,7 +39,10 @@ func (c *XSSChecker) SupportedFileExtension(fileName string) bool {
 	return ext == ".js" || ext == ".htm" || ext == ".html"
 }
 
-var scriptTag = []byte("<script")
+var (
+	beginScriptTag = []byte("<script")
+	endScriptTag   = []byte("</script>")
+)
 
 func checkHTML(src *sourcecode.SourceCode) ([]checker.Vulnerability, error) {
 	var result []checker.Vulnerability
@@ -58,11 +61,11 @@ _parserLoop:
 			}
 			break _parserLoop
 		case html.StartTagToken:
-			if bytes.EqualFold(data, scriptTag) {
+			if bytes.EqualFold(data, beginScriptTag) {
 				scriptTagLevel++
 			}
 		case html.EndTagToken:
-			if bytes.EqualFold(data, scriptTag) {
+			if bytes.EqualFold(data, endScriptTag) {
 				scriptTagLevel--
 				if scriptTagLevel < 0 {
 					return result, ErrUnbalancedScriptTag

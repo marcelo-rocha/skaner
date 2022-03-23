@@ -7,7 +7,8 @@ import (
 var (
 	ErrInvalidSource        = errors.New("invalid source code")
 	ErrFileTypeNotSupported = errors.New("file type not supported")
-	ErrUnbalancedScriptTag  = errors.New("Unbalanced script tag")
+	ErrUnbalancedScriptTag  = errors.New("unbalanced script tag")
+	ErrUnexpectedSourceEnd  = errors.New("unexpected source end")
 )
 
 type ParsingError struct {
