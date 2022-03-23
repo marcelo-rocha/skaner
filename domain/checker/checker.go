@@ -12,4 +12,5 @@ type Vulnerability struct {
 
 type Checker interface {
 	Check(src *sourcecode.SourceCode) ([]Vulnerability, error)
+	SupportedFileExtension(fileName string) bool
 }
