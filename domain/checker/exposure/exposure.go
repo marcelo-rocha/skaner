@@ -104,3 +104,7 @@ func (c *ExposureChecker) Check(src *sourcecode.SourceCode) ([]checker.Vulnerabi
 
 	return result, nil
 }
+
+func (c *ExposureChecker) SupportedFileExtension(fileName string) bool {
+	return true // all files
+}
