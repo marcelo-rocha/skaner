@@ -50,6 +50,7 @@ func checkHTML(src *sourcecode.SourceCode) ([]checker.Vulnerability, error) {
 	input := parse.NewInput(reader)
 	lexer := html.NewLexer(input)
 	scriptTagLevel := 0
+	scriptTagOffset := 0
 
 _parserLoop:
 	for {
@@ -63,6 +64,7 @@ _parserLoop:
 		case html.StartTagToken:
 			if bytes.EqualFold(data, beginScriptTag) {
 				scriptTagLevel++
+				scriptTagOffset = input.Offset()
 			}
 		case html.EndTagToken:
 			if bytes.EqualFold(data, endScriptTag) {
@@ -73,16 +75,15 @@ _parserLoop:
 			}
 		case html.TextToken:
 			if scriptTagLevel > 0 {
-				scriptOffset := input.Offset()
 				// ScanJS errors are ignored aiming to cover all the file
 				lines, _ := ScanJS(data, alertText)
 				if len(lines) > 0 {
-					baseLine, _, _ := parse.Position(bytes.NewReader(src.Source), scriptOffset)
+					baseLine, _, _ := parse.Position(bytes.NewReader(src.Source), scriptTagOffset)
 					for _, line := range lines {
 						result = append(result, checker.Vulnerability{
 							Kind:     VulnerabilityKind,
 							FilePath: src.FilePath,
-							Line:     line + baseLine,
+							Line:     line + baseLine - 1,
 						})
 					}
 				}

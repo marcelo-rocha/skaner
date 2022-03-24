@@ -20,10 +20,10 @@ func TestExposure(t *testing.T) {
 		qty      int
 		lines    []int
 	}{
-		{fileName: "exposure1.txt", qty: 1, lines: []int{4}},
-		{fileName: "exposure2.txt", qty: 0},
-		{fileName: "exposure3.txt", qty: 2, lines: []int{4, 5}},
-		{fileName: "exposure4.txt", qty: 1, lines: []int{2}},
+		{fileName: "exposure1.txt", lines: []int{4}},
+		{fileName: "exposure2.txt"},
+		{fileName: "exposure3.txt", lines: []int{4, 5}},
+		{fileName: "exposure4.txt", lines: []int{2}},
 	}
 
 	workDir, _ := os.Getwd()
@@ -49,10 +49,39 @@ func TestExposure(t *testing.T) {
 		list, err := exposureChecker.Check(src)
 		require.NoError(t, err)
 
-		require.Len(t, list, testCases[i].qty)
+		require.Len(t, list, len(testCases[i].lines))
 		for j := range list {
 			require.Equal(t, list[j].Line, testCases[i].lines[j])
 		}
 	}
+
+}
+
+func TestExposure2(t *testing.T) {
+	workDir, _ := os.Getwd()
+	var exposureChecker checker.Checker
+	exposureChecker, err := exposure.New([]string{
+		"Checkmate",
+		"$1.15b",
+		"Hillman & Froidman",
+	})
+	require.NoError(t, err)
+
+	fileName := "exposure5.txt"
+	srcFilePath := path.Join(workDir, "../../../test/data/", fileName)
+	f, err := os.Open(srcFilePath)
+	require.NoError(t, err)
+	defer f.Close()
+
+	content, err := io.ReadAll(f)
+	require.NoError(t, err)
+
+	src := sourcecode.NewSourceCode(content, fileName)
+
+	list, err := exposureChecker.Check(src)
+	require.NoError(t, err)
+
+	require.Len(t, list, 1)
+	require.Equal(t, list[0].Line, 13)
 
 }
