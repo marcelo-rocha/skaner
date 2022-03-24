@@ -38,6 +38,7 @@ func (sq *StringSequenceMacher) MatchWord(mc MatcherContext, w Word) bool {
 	if sq.SimpleMatchers[sc.matcherIdx].MatchWord(DefaultMatcherContext, w) {
 		sc.matcherIdx++
 		if sc.matcherIdx == len(sq.SimpleMatchers) {
+			sc.matcherIdx = 0
 			return true
 		}
 	} else {
