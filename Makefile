@@ -19,5 +19,5 @@ validate-go-version ::
 
 build: validate-go-version
 	go mod tidy
-	pushd dist && rm -v !($KEEP_FILE) && popd
+	bash -c "pushd dist && rm -f !\($(KEEP_FILE)\) && popd" 
 	CGO_ENABLE=0 GOOS=linux GOARCH=amd64 go build -o dist ./...
