@@ -1,14 +1,23 @@
 package sourcecode
 
+// SourceCode represents a program source code. src should be utf-8 format
+// It implements checker.Source interface
 type SourceCode struct {
-	Source   []byte
-	FilePath string
+	source   []byte
+	filePath string
 }
 
-// NewSourceCode represents a program source code. src should be utf-8 format
 func NewSourceCode(src []byte, path string) *SourceCode {
 	return &SourceCode{
-		Source:   src,
-		FilePath: path,
+		source:   src,
+		filePath: path,
 	}
+}
+
+func (s *SourceCode) Bytes() []byte {
+	return s.source
+}
+
+func (s *SourceCode) FilePath() string {
+	return s.filePath
 }

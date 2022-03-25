@@ -1,8 +1,9 @@
 package checker
 
-import (
-	"github.com/marcelo-rocha/skaner/domain/sourcecode"
-)
+type SourceCode interface {
+	Bytes() []byte
+	FilePath() string
+}
 
 type Vulnerability struct {
 	Kind     string
@@ -11,6 +12,6 @@ type Vulnerability struct {
 }
 
 type Checker interface {
-	Check(src *sourcecode.SourceCode) ([]Vulnerability, error)
+	Check(src SourceCode) ([]Vulnerability, error)
 	SupportedFileExtension(fileName string) bool
 }

@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/marcelo-rocha/skaner/domain/checker"
-	"github.com/marcelo-rocha/skaner/domain/sourcecode"
 )
 
 const VulnerabilityKind = "Sensitive data exposure"
@@ -46,9 +45,9 @@ func New(sensitiveData []string) (*ExposureChecker, error) {
 	}, nil
 }
 
-func (c *ExposureChecker) Check(src *sourcecode.SourceCode) ([]checker.Vulnerability, error) {
+func (c *ExposureChecker) Check(src checker.SourceCode) ([]checker.Vulnerability, error) {
 	var result []checker.Vulnerability
-	srcReader := bytes.NewReader(src.Source)
+	srcReader := bytes.NewReader(src.Bytes())
 	srcScanner := bufio.NewScanner(srcReader)
 
 	lineReader := bytes.NewReader([]byte{})
@@ -89,7 +88,7 @@ func (c *ExposureChecker) Check(src *sourcecode.SourceCode) ([]checker.Vulnerabi
 		if found {
 			result = append(result, checker.Vulnerability{
 				Kind:     VulnerabilityKind,
-				FilePath: src.FilePath,
+				FilePath: src.FilePath(),
 				Line:     currentLine,
 			})
 		}

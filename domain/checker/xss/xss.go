@@ -6,7 +6,6 @@ import (
 	"path"
 
 	"github.com/marcelo-rocha/skaner/domain/checker"
-	"github.com/marcelo-rocha/skaner/domain/sourcecode"
 	"github.com/tdewolff/parse/v2"
 	"github.com/tdewolff/parse/v2/html"
 )
@@ -22,8 +21,8 @@ func New() *XSSChecker {
 	return &XSSChecker{}
 }
 
-func (c *XSSChecker) Check(src *sourcecode.SourceCode) ([]checker.Vulnerability, error) {
-	ext := path.Ext(src.FilePath)
+func (c *XSSChecker) Check(src checker.SourceCode) ([]checker.Vulnerability, error) {
+	ext := path.Ext(src.FilePath())
 	switch ext {
 	case ".js":
 		return checkJS(src)
@@ -44,9 +43,9 @@ var (
 	endScriptTag   = []byte("</script>")
 )
 
-func checkHTML(src *sourcecode.SourceCode) ([]checker.Vulnerability, error) {
+func checkHTML(src checker.SourceCode) ([]checker.Vulnerability, error) {
 	var result []checker.Vulnerability
-	reader := bytes.NewReader(src.Source)
+	reader := bytes.NewReader(src.Bytes())
 	input := parse.NewInput(reader)
 	lexer := html.NewLexer(input)
 	scriptTagLevel := 0
@@ -78,11 +77,11 @@ _parserLoop:
 				// ScanJS errors are ignored aiming to cover all the file
 				lines, _ := ScanJS(data, alertText)
 				if len(lines) > 0 {
-					baseLine, _, _ := parse.Position(bytes.NewReader(src.Source), scriptTagOffset)
+					baseLine, _, _ := parse.Position(bytes.NewReader(src.Bytes()), scriptTagOffset)
 					for _, line := range lines {
 						result = append(result, checker.Vulnerability{
 							Kind:     VulnerabilityKind,
-							FilePath: src.FilePath,
+							FilePath: src.FilePath(),
 							Line:     line + baseLine - 1,
 						})
 					}
@@ -93,14 +92,14 @@ _parserLoop:
 	return result, nil
 }
 
-func checkJS(src *sourcecode.SourceCode) ([]checker.Vulnerability, error) {
+func checkJS(src checker.SourceCode) ([]checker.Vulnerability, error) {
 	var result []checker.Vulnerability
-	lines, err := ScanJS(src.Source, alertText)
+	lines, err := ScanJS(src.Bytes(), alertText)
 	if len(lines) > 0 {
 		for _, line := range lines {
 			result = append(result, checker.Vulnerability{
 				Kind:     VulnerabilityKind,
-				FilePath: src.FilePath,
+				FilePath: src.FilePath(),
 				Line:     line,
 			})
 		}
