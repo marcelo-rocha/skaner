@@ -1,7 +1,13 @@
 package main
 
-import "fmt"
+import (
+	"github.com/marcelo-rocha/skaner/cmd/skaner/cmd"
+	"go.uber.org/zap"
+)
 
 func main() {
-	fmt.Println("hello")
+	logger, _ := zap.NewProduction()
+	defer logger.Sync() // flushes buffer, if any
+
+	cmd.Execute(logger)
 }
