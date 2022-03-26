@@ -93,7 +93,7 @@ func (c *SQLChecker) checkInsecureSQL(strReader io.Reader) bool {
 				state = WhereFound
 			}
 		case WhereFound:
-			if bytes.Equal(w, placeholdKeyword) {
+			if bytes.Contains(w, placeholdKeyword) {
 				return true
 			}
 		}
@@ -105,23 +105,22 @@ func (c *SQLChecker) checkInsecureSQL(strReader io.Reader) bool {
 // resolveLineNumbers offsets argument must be ordered
 func (c *SQLChecker) resolveLineNumbers(src checker.SourceCode, offsets []int) []int {
 	result := make([]int, len(offsets))
-	reader := bytes.NewReader(src.Bytes())
 	line := 0
-
-_offsets_loop:
+	locs := c.lineBreakRE.FindAllIndex(src.Bytes(), -1)
 	for i, n := range offsets {
-		for {
-			line++
-			idx := c.lineBreakRE.FindReaderIndex(reader)
-			if idx == nil {
-				break _offsets_loop
-			}
-			if idx[0] > n {
+		for j := line; j < len(locs); j++ {
+			if locs[j][0] > n {
+				line = j
 				break
 			}
 		}
-		result[i] = line
+		result[i] = line + 1
+		line++
 	}
 
 	return result
+}
+
+func (c *SQLChecker) SupportedFileExtension(fileName string) bool {
+	return true // all files
 }
