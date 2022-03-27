@@ -27,3 +27,11 @@ func (c *NoOperationChecker) Check(src SourceCode) ([]Vulnerability, error) {
 func (c *NoOperationChecker) SupportedFileExtension(fileName string) bool {
 	return false
 }
+
+func GetVulnerabilityLines(list []Vulnerability) []int {
+	var r []int
+	for i := range list {
+		r = append(r, list[i].Line)
+	}
+	return r
+}

@@ -34,6 +34,9 @@ var (
 			if len(options.SensitiveText) == 0 && !options.DisableExposureCheck {
 				return errors.New("sensitive strings must be defined")
 			}
+			if options.WorkersQty < 1 {
+				return errors.New("workers must be one or more")
+			}
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -82,14 +85,12 @@ func initConfig() {
 	if cfgFile != "" {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
-	}
-
-	if cfgFile != "" {
 		if err := viper.ReadInConfig(); err != nil {
 			fmt.Fprintln(os.Stderr, "config file error:", err)
 			os.Exit(1)
 		}
 	}
+
 	if ss := viper.GetStringSlice("sensitive-text"); len(ss) > 0 {
 		if len(options.SensitiveText) == 0 {
 			options.SensitiveText = ss
