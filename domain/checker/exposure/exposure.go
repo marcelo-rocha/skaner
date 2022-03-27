@@ -22,6 +22,7 @@ type ExposureChecker struct {
 	matchers      []StringMatcher
 }
 
+// CheckContext is used to store values that can be modified concurrently
 type CheckContext interface{}
 
 func New(sensitiveData []string) (*ExposureChecker, error) {

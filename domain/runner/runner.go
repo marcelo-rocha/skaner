@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"sync"
 
 	"github.com/marcelo-rocha/skaner/domain/checker"
@@ -79,8 +80,9 @@ func prepareCheckers(opts Options, logger *zap.Logger) []checker.Checker {
 	return checkers
 }
 
-func AddJobIfEnabled(enabled bool, queue []Job, kind CheckingKind, src checker.SourceCode, name string) []Job {
-	if enabled {
+func AddJobIfEnabled(enabled bool, queue []Job, kind CheckingKind, checkers []checker.Checker,
+	src checker.SourceCode, name string) []Job {
+	if enabled && checkers[kind].SupportedFileExtension(path.Ext(name)) {
 		queue = append(queue, Job{
 			Kind:        kind,
 			FileContent: src,
@@ -99,7 +101,7 @@ func printVulnerabilites(output io.Writer, list []checker.Vulnerability, jsonFor
 		fmt.Fprintf(output, "%s\n", JsonOutput)
 	} else {
 		for _, item := range list {
-			fmt.Fprintf(output, `[%s] in file "%s" on line %v\n`, item.Kind, item.FilePath, item.Line)
+			fmt.Fprintf(output, "[%s] in file \"%s\" on line %v\n", item.Kind, path.Base(item.FilePath), item.Line)
 		}
 	}
 	return nil
@@ -110,16 +112,16 @@ func Run(ctx context.Context, output io.Writer, fileNames []string, opts Options
 	checkers := prepareCheckers(opts, logger)
 	var wg sync.WaitGroup
 	var result []checker.Vulnerability
-
-	jobChannel := make(chan Job, CheckersQty)
-	resultChannel := make(chan []checker.Vulnerability, CheckersQty)
+	mustAbort := false
+	jobChannel := make(chan Job)
+	resultChannel := make(chan []checker.Vulnerability)
 
 	for n := 0; n < opts.WorkersQty; n++ {
 		wg.Add(1)
 		go worker(n, checkers, jobChannel, resultChannel, &wg, logger)
 	}
 
-	jobs := 0
+	activeJobs := 0
 _filesLoop:
 	for _, name := range fileNames {
 		content, err := os.ReadFile(name)
@@ -130,32 +132,23 @@ _filesLoop:
 		var src checker.SourceCode = sourcecode.NewSourceCode(content, name)
 
 		var queue = []Job{}
-		queue = AddJobIfEnabled(!opts.DisableExposureCheck, queue, ExposureChecking, src, name)
-		queue = AddJobIfEnabled(!opts.DisableSQLCheck, queue, SQLChecking, src, name)
-		queue = AddJobIfEnabled(!opts.DisableXSSCheck, queue, XSSChecking, src, name)
+		queue = AddJobIfEnabled(!opts.DisableExposureCheck, queue, ExposureChecking, checkers, src, name)
+		queue = AddJobIfEnabled(!opts.DisableSQLCheck, queue, SQLChecking, checkers, src, name)
+		queue = AddJobIfEnabled(!opts.DisableXSSCheck, queue, XSSChecking, checkers, src, name)
 
 		i := 0
-	_queueLoop:
-		for {
+		for i < len(queue) {
 			select {
 			case <-ctx.Done():
-				{
-					logger.Debug("context cancelled")
-					break _filesLoop
-				}
+				logger.Debug("context cancelled")
+				mustAbort = true
+				break _filesLoop
 			case jobChannel <- queue[i]:
-				{
-					jobs++
-					i++
-					if i == len(queue) {
-						break _queueLoop
-					}
-				}
+				activeJobs++
+				i++
 			case r := <-resultChannel:
-				{
-					result = append(result, r...)
-					jobs--
-				}
+				result = append(result, r...)
+				activeJobs--
 			}
 		}
 	}
@@ -163,18 +156,17 @@ _filesLoop:
 	close(jobChannel)
 
 	// All jobs was sent, now only waiting for results
-_resultLoop:
-	for jobs > 0 {
+	for activeJobs > 0 && !mustAbort {
 		select {
 		case <-ctx.Done():
 			{
 				logger.Debug("context cancelled")
-				break _resultLoop
+				mustAbort = true
 			}
 		case r := <-resultChannel:
 			{
 				result = append(result, r...)
-				jobs--
+				activeJobs--
 			}
 		}
 	}
@@ -182,11 +174,7 @@ _resultLoop:
 	wg.Wait()
 	close(resultChannel)
 
-	if ctx.Err() != nil {
-		return
-	}
-
-	if len(result) > 0 {
+	if !mustAbort && len(result) > 0 {
 		if err := printVulnerabilites(output, result, opts.JsonOutput); err != nil {
 			logger.Error("failed to output result", zap.Error(err))
 		}
